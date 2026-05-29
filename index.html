@@ -14,7 +14,7 @@ body {
   transition: background 1s ease;
 }
 
-/* DRAGGABLE */
+/* EVERYTHING DRAGGABLE */
 .draggable {
   position:absolute;
   cursor:move;
@@ -27,7 +27,7 @@ body {
   top:20px;
   font-size:40px;
   font-weight:bold;
-  background:transparent;
+  cursor:move;
 }
 
 /* SEARCH */
@@ -103,9 +103,10 @@ body {
 
 <body>
 
-<!-- TITLE (NOW DRAGGABLE) -->
+<!-- TITLE -->
 <div id="title" class="draggable">Web Builder</div>
 
+<!-- SEARCH -->
 <div id="search-container" class="draggable">
   <input id="search-box" placeholder="Search pages...">
 </div>
@@ -122,54 +123,56 @@ body {
 
 <button id="toggleBtn" onclick="toggleSidebar()">☰</button>
 
+<!-- HELP -->
 <div id="helpBox">
   <h3>How to use</h3>
   <ul>
     <li>Drag title, text, images, videos</li>
+    <li>Use sidebar buttons to add items</li>
     <li>Change background color</li>
-    <li>Add items using sidebar</li>
   </ul>
   <button onclick="toggleHelp()">Close</button>
 </div>
 
 <script>
 
-let bgColor = "#ffffff";
+/* =========================
+   GLOBAL DRAG SYSTEM (FIXED)
+========================= */
+let dragItem = null;
+let offsetX = 0;
+let offsetY = 0;
 
-/* ✅ DRAG FIXED (TITLE WORKS 100%) */
-function makeDraggable(el){
-  let dragging = false;
-  let offsetX = 0;
-  let offsetY = 0;
+document.addEventListener("mousedown", (e) => {
+  const target = e.target.closest(".draggable");
+  if (!target) return;
 
-  el.addEventListener("mousedown", (e) => {
-    dragging = true;
+  dragItem = target;
 
-    const rect = el.getBoundingClientRect();
-    offsetX = e.clientX - rect.left;
-    offsetY = e.clientY - rect.top;
+  const rect = target.getBoundingClientRect();
+  offsetX = e.clientX - rect.left;
+  offsetY = e.clientY - rect.top;
 
-    el.style.position = "absolute";
-  });
+  target.style.position = "absolute";
+});
 
-  document.addEventListener("mousemove", (e) => {
-    if(!dragging) return;
+document.addEventListener("mousemove", (e) => {
+  if (!dragItem) return;
 
-    el.style.left = (e.clientX - offsetX) + "px";
-    el.style.top = (e.clientY - offsetY) + "px";
-  });
+  dragItem.style.left = (e.clientX - offsetX) + "px";
+  dragItem.style.top = (e.clientY - offsetY) + "px";
+});
 
-  document.addEventListener("mouseup", () => {
-    dragging = false;
-  });
+document.addEventListener("mouseup", () => {
+  dragItem = null;
+});
+
+/* SIDEBAR */
+function toggleSidebar(){
+  document.getElementById("sidebar").classList.toggle("show");
 }
 
-/* MAKE TITLE DRAGGABLE */
-makeDraggable(document.getElementById("title"));
-makeDraggable(document.getElementById("search-container"));
-
 /* CHANGE TITLE */
-  function toggeltitle(){
 function changeTitle(){
   const t = prompt("New title:");
   if(t){
@@ -183,28 +186,21 @@ function createItem(el){
   wrap.className = "draggable";
   wrap.style.left = "120px";
   wrap.style.top = "150px";
-
   wrap.appendChild(el);
-
   document.body.appendChild(wrap);
-  makeDraggable(wrap);
 }
 
-/* ADD TEXT (matches background color) */
+/* ADD TEXT */
 function addText(){
   const box = document.createElement("div");
   box.contentEditable = true;
   box.innerText = "New Text";
-
   box.style.padding = "8px";
-  box.style.minWidth = "120px";
-  box.style.background = bgColor;
-  box.style.borderRadius = "5px";
-
+  box.style.background = "white";
   createItem(box);
 }
 
-/* IMAGE */
+/* ADD IMAGE */
 function addImage(){
   const url = prompt("Image URL:");
   if(!url) return;
@@ -212,11 +208,10 @@ function addImage(){
   const img = document.createElement("img");
   img.src = url;
   img.style.width = "200px";
-
   createItem(img);
 }
 
-/* VIDEO */
+/* ADD VIDEO */
 function addVideo(){
   const url = prompt("Video URL:");
   if(!url) return;
@@ -225,7 +220,6 @@ function addVideo(){
   vid.src = url;
   vid.controls = true;
   vid.style.width = "300px";
-
   createItem(vid);
 }
 
@@ -235,24 +229,14 @@ function pickColor(){
   input.type = "color";
 
   input.oninput = () => {
-    bgColor = input.value;
-    document.body.style.background = bgColor;
-
-    document.querySelectorAll("[contenteditable]").forEach(el=>{
-      el.style.background = bgColor;
-    });
+    document.body.style.background = input.value;
   };
 
   input.click();
 }
 
-/* SIDEBAR */
-function toggleSidebar(){
-  document.getElementById("sidebar").classList.toggle("show");
-}
-
 /* HELP */
-function togglehelp(){
+function toggleHelp(){
   const box = document.getElementById("helpBox");
   box.style.display = box.style.display === "block" ? "none" : "block";
 }
