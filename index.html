@@ -13,7 +13,6 @@ body {
   background:#fff;
 }
 
-/* DRAGGABLE ITEMS */
 .draggable {
   position:absolute;
   cursor:move;
@@ -28,7 +27,7 @@ body {
   font-weight:bold;
 }
 
-/* SEARCH / TOOLBAR */
+/* SEARCH */
 #search-container {
   position:absolute;
   top:80px;
@@ -43,8 +42,6 @@ body {
   font-size:16px;
   border-radius:25px;
   border:1px solid #ccc;
-  box-shadow:0 2px 6px rgba(0,0,0,0.2);
-  cursor:text;
 }
 
 /* SIDEBAR */
@@ -57,8 +54,7 @@ body {
   background:#4285F4;
   color:white;
   padding:10px;
-  transition:left 0.3s;
-  z-index:1000;
+  transition:0.3s;
 }
 
 #sidebar.show { left:0; }
@@ -69,23 +65,7 @@ body {
   padding:10px;
   border:none;
   border-radius:5px;
-  cursor:pointer;
   font-weight:bold;
-}
-
-/* TOGGLE */
-#toggleBtn {
-  position:fixed;
-  top:50%;
-  right:10px;
-  transform:translateY(-50%);
-  width:50px;
-  height:50px;
-  border-radius:50%;
-  background:#4285F4;
-  color:white;
-  font-size:24px;
-  border:none;
   cursor:pointer;
 }
 
@@ -100,20 +80,20 @@ body {
   border:2px solid #4285F4;
   padding:15px;
   border-radius:10px;
-  box-shadow:0 5px 15px rgba(0,0,0,0.2);
   z-index:2000;
 }
-#helpBox h3 { margin-top:0; }
-#helpBox ul { padding-left:18px; }
-#helpBox button {
-  margin-top:10px;
-  padding:8px;
-  width:100%;
+
+#toggleBtn {
+  position:fixed;
+  top:50%;
+  right:10px;
+  width:50px;
+  height:50px;
+  border-radius:50%;
   background:#4285F4;
   color:white;
   border:none;
-  border-radius:5px;
-  cursor:pointer;
+  font-size:24px;
 }
 </style>
 </head>
@@ -143,21 +123,17 @@ body {
 
 <button id="toggleBtn" onclick="toggleSidebar()">☰</button>
 
-<!-- HELP PANEL -->
 <div id="helpBox">
   <h3>How to use</h3>
   <ul>
     <li>Drag items around the page</li>
-    <li>Add images, videos, text, or links from the menu</li>
-    <li>Click 🗑 Delete Mode then click items to remove them</li>
-    <li>Save pages using "Save Page"</li>
-    <li>Click page names in the sidebar to switch pages</li>
-    <li>Home page shows the search bar</li>
+    <li>Add images/videos/text/links from menu</li>
+    <li>Use Delete Mode to remove items</li>
+    <li>Save pages and reopen them from sidebar</li>
+    <li>Search pages from Home screen</li>
   </ul>
   <button onclick="toggleHelp()">Close</button>
 </div>
-
-<input type="color" id="colorPicker" style="display:none">
 
 <script>
 let pages = {};
@@ -169,132 +145,128 @@ function toggleSidebar(){
   document.getElementById("sidebar").classList.toggle("show");
 }
 
+/* PAGE LIST */
 function refreshPageList(){
   const list = document.getElementById("pageList");
-  list.innerHTML = "<b>Pages:</b><br>";
+  list.innerHTML = "<b>Pages</b><br>";
+
   Object.keys(pages).forEach(name=>{
-    const btn = document.createElement("button");
-    btn.innerText = name;
-    btn.onclick = ()=>loadPage(name);
-    list.appendChild(btn);
+    const b = document.createElement("button");
+    b.innerText = name;
+    b.onclick = ()=>loadPage(name);
+    list.appendChild(b);
   });
 }
 
 /* DRAG */
 function makeDraggable(el){
-  let dragging=false, ox=0, oy=0;
-  el.addEventListener("mousedown", e=>{
+  let drag=false, ox=0, oy=0;
+
+  el.onmousedown = e=>{
     if(deleteMode) return;
-    dragging=true;
+    drag=true;
     ox=e.clientX-el.offsetLeft;
     oy=e.clientY-el.offsetTop;
-  });
-  document.addEventListener("mousemove", e=>{
-    if(!dragging) return;
+  };
+
+  document.onmousemove = e=>{
+    if(!drag) return;
     el.style.left=(e.clientX-ox)+"px";
     el.style.top=(e.clientY-oy)+"px";
-  });
-  document.addEventListener("mouseup", ()=>dragging=false);
+  };
+
+  document.onmouseup = ()=>drag=false;
 }
 
 /* DELETE MODE */
 function toggleDelete(){
-  deleteMode = !deleteMode;
-  alert(deleteMode ? "Delete mode ON (click items to remove)" : "Delete mode OFF");
-  document.querySelectorAll(".draggable").forEach(el=>{
-    el.onclick = deleteMode ? ()=>el.remove() : null;
-  });
+  deleteMode=!deleteMode;
+  alert(deleteMode?"Delete ON":"Delete OFF");
 }
 
-/* ITEM WRAPPER */
+/* ITEMS */
 function createItem(el){
-  const wrap = document.createElement("div");
-  wrap.className="draggable";
-  wrap.style.left="120px";
-  wrap.style.top="150px";
-  wrap.appendChild(el);
-  makeDraggable(wrap);
-  if(deleteMode) wrap.onclick = ()=>wrap.remove();
-  document.body.appendChild(wrap);
+  const w=document.createElement("div");
+  w.className="draggable";
+  w.style.left="120px";
+  w.style.top="150px";
+  w.appendChild(el);
+
+  if(deleteMode) w.onclick=()=>w.remove();
+
+  makeDraggable(w);
+  document.body.appendChild(w);
 }
 
-/* IMAGE */
+/* ADD ITEMS */
 function addImage(){
-  const url = prompt("Image URL:");
-  if(!url) return;
-  const img = document.createElement("img");
-  img.src=url;
-  img.style.width="200px";
-  createItem(img);
+  const u=prompt("Image URL"); if(!u) return;
+  const i=document.createElement("img");
+  i.src=u; i.style.width="200px";
+  createItem(i);
 }
 
-/* VIDEO */
 function addVideo(){
-  const url = prompt("Video URL:");
-  if(!url) return;
-  const vid = document.createElement("video");
-  vid.src=url;
-  vid.controls=true;
-  vid.style.width="300px";
-  createItem(vid);
+  const u=prompt("Video URL"); if(!u) return;
+  const v=document.createElement("video");
+  v.src=u; v.controls=true; v.style.width="300px";
+  createItem(v);
 }
 
-/* TEXT */
 function addText(){
-  const div=document.createElement("div");
-  div.contentEditable=true;
-  div.innerText="Text";
-  div.style.padding="5px";
-  createItem(div);
+  const d=document.createElement("div");
+  d.contentEditable=true;
+  d.innerText="Text";
+  createItem(d);
 }
 
-/* LINK */
 function addLink(){
-  const url=prompt("URL:");
-  if(!url) return;
+  const u=prompt("URL"); if(!u) return;
   const a=document.createElement("a");
-  a.href=url;
-  a.target="_blank";
-  a.innerText=url;
+  a.href=u; a.target="_blank"; a.innerText=u;
   createItem(a);
 }
 
-/* SAVE PAGE */
+/* SAVE */
 function savePage(){
-  const name = prompt("Page name:");
+  const name=prompt("Page name");
   if(!name) return;
-  const data = [];
+
+  const data=[];
   document.querySelectorAll(".draggable").forEach(el=>{
     if(el.id==="search-container") return;
+
     data.push({
       html: el.innerHTML,
       x: el.style.left,
       y: el.style.top
     });
   });
-  pages[name] = data;
+
+  pages[name]=data;
   refreshPageList();
   alert("Saved!");
 }
 
-/* LOAD PAGE */
+/* LOAD */
 function loadPage(name){
   currentPage=name;
+
   document.querySelectorAll(".draggable").forEach(el=>{
     if(el.id!=="search-container") el.remove();
   });
-  const search = document.getElementById("search-container");
-  search.style.display = (name==="Home") ? "block" : "none";
-  const data = pages[name];
-  if(!data) return;
-  data.forEach(item=>{
-    const div=document.createElement("div");
-    div.className="draggable";
-    div.style.left=item.x;
-    div.style.top=item.y;
-    div.innerHTML=item.html;
-    makeDraggable(div);
-    document.body.appendChild(div);
+
+  document.getElementById("search-container").style.display =
+    name==="Home" ? "block" : "none";
+
+  (pages[name]||[]).forEach(item=>{
+    const d=document.createElement("div");
+    d.className="draggable";
+    d.style.left=item.x;
+    d.style.top=item.y;
+    d.innerHTML=item.html;
+    makeDraggable(d);
+    document.body.appendChild(d);
   });
 }
 
@@ -305,28 +277,34 @@ function home(){
 
 /* NEW PAGE */
 function createPage(){
-  const name=prompt("Page name:");
-  if(!name) return;
-  pages[name]=[];
-  loadPage(name);
+  const n=prompt("Page name");
+  if(!n) return;
+  pages[n]=[];
+  loadPage(n);
   refreshPageList();
 }
 
-/* SEARCH PAGES */
+/* SEARCH */
 function searchPage(e){
   if(e.key==="Enter"){
     const q=e.target.value;
     if(pages[q]) loadPage(q);
-    else alert("Page not found");
+    else alert("Not found");
   }
 }
 
-/* HOW TO */
-function howTo(){
-  toggleHelp();
+/* HELP */
+function howTo(){ toggleHelp(); }
+
+function toggleHelp(){
+  const h=document.getElementById("helpBox");
+  h.style.display = (h.style.display==="block") ? "none" : "block";
 }
 
-/* HELP PANEL */
-function toggleHelp(){
-  const box=document.getElementById("helpBox");
-  box.style.display = (box.style.display==="none" || box.style.display==="") ? "
+/* INIT */
+refreshPageList();
+loadPage("Home");
+</script>
+
+</body>
+</html>
