@@ -169,6 +169,7 @@ makeDraggable(document.getElementById("title"));
 makeDraggable(document.getElementById("search-container"));
 
 /* CHANGE TITLE */
+  function toggeltitle(){
 function changeTitle(){
   const t = prompt("New title:");
   if(t){
@@ -251,7 +252,7 @@ function toggleSidebar(){
 }
 
 /* HELP */
-function toggleHelp(){
+function togglehelp(){
   const box = document.getElementById("helpBox");
   box.style.display = box.style.display === "block" ? "none" : "block";
 }
