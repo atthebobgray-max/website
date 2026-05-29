@@ -13,6 +13,7 @@ body {
   background:#fff;
 }
 
+/* DRAGGABLE */
 .draggable {
   position:absolute;
   cursor:move;
@@ -53,6 +54,7 @@ body {
   color:white;
   padding:10px;
   transition:0.3s;
+  z-index:1000;
 }
 
 #sidebar.show { left:0; }
@@ -64,10 +66,9 @@ body {
   border:none;
   border-radius:5px;
   font-weight:bold;
-  cursor:pointer;
 }
 
-/* HELP BOX */
+/* HELP */
 #helpBox {
   display:none;
   position:fixed;
@@ -81,6 +82,7 @@ body {
   z-index:2000;
 }
 
+/* TOGGLE */
 #toggleBtn {
   position:fixed;
   top:50%;
@@ -124,16 +126,16 @@ body {
 <div id="helpBox">
   <h3>How to use</h3>
   <ul>
-    <li>Drag title, search bar, images, videos, text, or links</li>
-    <li>Add images/videos/text/links from the menu</li>
-    <li>Use Delete Mode to remove items</li>
-    <li>Save pages and switch between them using sidebar</li>
-    <li>Search pages from Home screen</li>
+    <li>Drag title, search, images, videos, text, links</li>
+    <li>Add items from menu</li>
+    <li>Delete mode removes items</li>
+    <li>Save and switch pages</li>
   </ul>
   <button onclick="toggleHelp()">Close</button>
 </div>
 
 <script>
+
 let pages = {};
 let currentPage = "Home";
 let deleteMode = false;
@@ -143,39 +145,28 @@ function toggleSidebar(){
   document.getElementById("sidebar").classList.toggle("show");
 }
 
-/* PAGE LIST */
-function refreshPageList(){
-  const list = document.getElementById("pageList");
-  list.innerHTML = "<b>Pages</b><br>";
-
-  Object.keys(pages).forEach(name=>{
-    const b = document.createElement("button");
-    b.innerText = name;
-    b.onclick = ()=>loadPage(name);
-    list.appendChild(b);
-  });
-}
-
-/* UNIVERSAL DRAG FUNCTION */
+/* DRAG FIXED (TITLE WORKS NOW) */
 function makeDraggable(el){
   let dragging = false;
   let offsetX = 0;
   let offsetY = 0;
 
   el.addEventListener("mousedown", (e) => {
-    if (deleteMode) return;
-    // Allow input typing, links, videos interaction
-    if(e.target.tagName==="INPUT" || e.target.tagName==="TEXTAREA" || e.target.tagName==="VIDEO" || e.target.tagName==="A") return;
+    if(deleteMode) return;
+
+    if(e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
 
     dragging = true;
-    offsetX = e.clientX - el.getBoundingClientRect().left;
-    offsetY = e.clientY - el.getBoundingClientRect().top;
+
+    const rect = el.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
 
     el.style.position = "absolute";
   });
 
   document.addEventListener("mousemove", (e) => {
-    if (!dragging) return;
+    if(!dragging) return;
 
     el.style.left = (e.clientX - offsetX) + "px";
     el.style.top = (e.clientY - offsetY) + "px";
@@ -187,61 +178,67 @@ function makeDraggable(el){
   });
 }
 
+/* INIT DRAGGABLE ELEMENTS */
+makeDraggable(document.getElementById("title"));
+makeDraggable(document.getElementById("search-container"));
+
 /* DELETE MODE */
 function toggleDelete(){
   deleteMode = !deleteMode;
-  alert(deleteMode ? "Delete mode ON (click items to remove)" : "Delete mode OFF");
+  alert(deleteMode ? "Delete ON" : "Delete OFF");
 }
 
-/* ITEM CREATION */
+/* CREATE ITEMS */
 function createItem(el){
-  const wrapper = document.createElement("div");
-  wrapper.className = "draggable";
-  wrapper.style.position = "absolute";
-  wrapper.style.left = "120px";
-  wrapper.style.top = "150px";
-  wrapper.appendChild(el);
+  const wrap = document.createElement("div");
+  wrap.className = "draggable";
+  wrap.style.left = "120px";
+  wrap.style.top = "150px";
+  wrap.appendChild(el);
 
-  if(deleteMode) wrapper.onclick=()=>wrapper.remove();
+  if(deleteMode) wrap.onclick = () => wrap.remove();
 
-  document.body.appendChild(wrapper);
-  makeDraggable(wrapper);
+  document.body.appendChild(wrap);
+  makeDraggable(wrap);
 }
 
-/* ADD ITEMS */
+/* ADD IMAGE */
 function addImage(){
-  const u = prompt("Image URL");
-  if(!u) return;
-  const i = document.createElement("img");
-  i.src = u;
-  i.style.width="200px";
-  createItem(i);
+  const url = prompt("Image URL");
+  if(!url) return;
+  const img = document.createElement("img");
+  img.src = url;
+  img.style.width = "200px";
+  createItem(img);
 }
 
+/* ADD VIDEO */
 function addVideo(){
-  const u = prompt("Video URL");
-  if(!u) return;
-  const v = document.createElement("video");
-  v.src=u;
-  v.controls=true;
-  v.style.width="300px";
-  createItem(v);
+  const url = prompt("Video URL");
+  if(!url) return;
+  const vid = document.createElement("video");
+  vid.src = url;
+  vid.controls = true;
+  vid.style.width = "300px";
+  createItem(vid);
 }
 
+/* ADD TEXT */
 function addText(){
-  const d = document.createElement("div");
-  d.contentEditable=true;
-  d.innerText="Text";
-  createItem(d);
+  const div = document.createElement("div");
+  div.contentEditable = true;
+  div.innerText = "Text";
+  createItem(div);
 }
 
+/* ADD LINK */
 function addLink(){
-  const u = prompt("URL");
-  if(!u) return;
+  const url = prompt("URL");
+  if(!url) return;
   const a = document.createElement("a");
-  a.href=u;
-  a.target="_blank";
-  a.innerText=u;
+  a.href = url;
+  a.target = "_blank";
+  a.innerText = url;
   createItem(a);
 }
 
@@ -251,17 +248,19 @@ function savePage(){
   if(!name) return;
 
   const data = [];
+
   document.querySelectorAll(".draggable").forEach(el=>{
-    if(el.id==="search-container" || el.id==="title") return;
+    if(el.id === "title" || el.id === "search-container") return;
+
     data.push({
       html: el.innerHTML,
-      x: el.style.left,
-      y: el.style.top
+      left: el.style.left,
+      top: el.style.top
     });
   });
 
   pages[name] = data;
-  refreshPageList();
+  refreshPages();
   alert("Saved!");
 }
 
@@ -270,57 +269,74 @@ function loadPage(name){
   currentPage = name;
 
   document.querySelectorAll(".draggable").forEach(el=>{
-    if(el.id !== "search-container" && el.id !== "title") el.remove();
+    if(el.id !== "title" && el.id !== "search-container") el.remove();
   });
 
   document.getElementById("search-container").style.display =
-    name==="Home" ? "block" : "none";
+    name === "Home" ? "block" : "none";
 
   (pages[name] || []).forEach(item=>{
     const d = document.createElement("div");
-    d.className="draggable";
-    d.style.left=item.x;
-    d.style.top=item.y;
-    d.innerHTML=item.html;
+    d.className = "draggable";
+    d.style.left = item.left;
+    d.style.top = item.top;
+    d.innerHTML = item.html;
     makeDraggable(d);
     document.body.appendChild(d);
   });
 }
 
+/* PAGES LIST */
+function refreshPages(){
+  const box = document.getElementById("pageList");
+  box.innerHTML = "<b>Pages</b>";
+
+  Object.keys(pages).forEach(p=>{
+    const b = document.createElement("button");
+    b.innerText = p;
+    b.onclick = () => loadPage(p);
+    box.appendChild(b);
+  });
+}
+
 /* HOME */
-function home(){ loadPage("Home"); }
+function home(){
+  loadPage("Home");
+}
 
 /* NEW PAGE */
 function createPage(){
-  const n = prompt("Page name");
-  if(!n) return;
-  pages[n] = [];
-  loadPage(n);
-  refreshPageList();
+  const name = prompt("Page name");
+  if(!name) return;
+  pages[name] = [];
+  refreshPages();
+  loadPage(name);
 }
 
 /* SEARCH */
 function searchPage(e){
-  if(e.key==="Enter"){
+  if(e.key === "Enter"){
     const q = e.target.value;
     if(pages[q]) loadPage(q);
-    else alert("Page not found");
+    else alert("Not found");
   }
 }
 
 /* HELP */
-function howTo(){ toggleHelp(); }
+function howTo(){
+  toggleHelp();
+}
+
 function toggleHelp(){
-  const h = document.getElementById("helpBox");
-  h.style.display = (h.style.display==="block") ? "none" : "block";
+  const box = document.getElementById("helpBox");
+  box.style.display = box.style.display === "block" ? "none" : "block";
 }
 
 /* INIT */
-makeDraggable(document.getElementById("title"));
-makeDraggable(document.getElementById("search-container"));
-refreshPageList();
+refreshPages();
 loadPage("Home");
 
 </script>
+
 </body>
 </html>
