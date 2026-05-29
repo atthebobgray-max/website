@@ -10,10 +10,11 @@ body {
   font-family: Arial, sans-serif;
   margin:0;
   padding:0;
-  background:#fff;
+  background:#ffffff;
   transition: background 1s ease;
 }
 
+/* DRAGGABLE */
 .draggable {
   position:absolute;
   cursor:move;
@@ -26,6 +27,7 @@ body {
   top:20px;
   font-size:40px;
   font-weight:bold;
+  background:transparent;
 }
 
 /* SEARCH */
@@ -83,6 +85,7 @@ body {
   z-index:2000;
 }
 
+/* TOGGLE */
 #toggleBtn {
   position:fixed;
   top:50%;
@@ -100,104 +103,107 @@ body {
 
 <body>
 
-<!-- TITLE -->
+<!-- TITLE (NOW DRAGGABLE) -->
 <div id="title" class="draggable">Web Builder</div>
 
 <div id="search-container" class="draggable">
-  <input id="search-box" placeholder="Search pages..." onkeydown="searchPage(event)">
+  <input id="search-box" placeholder="Search pages...">
 </div>
 
 <!-- SIDEBAR -->
 <div id="sidebar">
-  <button onclick="home()">Home</button>
-
   <button onclick="changeTitle()">✏ Change Title</button>
   <button onclick="addText()">➕ Add Text</button>
   <button onclick="addImage()">Add Image</button>
   <button onclick="addVideo()">Add Video</button>
-
   <button onclick="pickColor()">Background Color</button>
-  <button onclick="toggleDelete()">🗑 Delete Mode</button>
-
-  <button onclick="savePage()">Save Page</button>
-  <button onclick="createPage()">+ New Page</button>
-  <button onclick="howTo()">How to use</button>
+  <button onclick="toggleHelp()">How to use</button>
 </div>
 
 <button id="toggleBtn" onclick="toggleSidebar()">☰</button>
 
-<!-- HELP -->
 <div id="helpBox">
   <h3>How to use</h3>
   <ul>
-    <li>Drag everything (title, text, images)</li>
-    <li>Use buttons in sidebar to add stuff</li>
-    <li>Click Change Title to rename website</li>
-    <li>Use delete mode to remove items</li>
+    <li>Drag title, text, images, videos</li>
+    <li>Change background color</li>
+    <li>Add items using sidebar</li>
   </ul>
   <button onclick="toggleHelp()">Close</button>
 </div>
 
 <script>
 
-let deleteMode = false;
-let pages = {};
+let bgColor = "#ffffff";
 
-/* SIDEBAR */
-function toggleSidebar(){
-  document.getElementById("sidebar").classList.toggle("show");
-}
-
-/* DRAG SYSTEM */
+/* ✅ DRAG FIXED (TITLE WORKS 100%) */
 function makeDraggable(el){
   let dragging = false;
-  let ox = 0;
-  let oy = 0;
+  let offsetX = 0;
+  let offsetY = 0;
 
-  el.onmousedown = (e)=>{
-    if(deleteMode) return;
-    if(e.target.tagName === "INPUT") return;
-
+  el.addEventListener("mousedown", (e) => {
     dragging = true;
-    const r = el.getBoundingClientRect();
-    ox = e.clientX - r.left;
-    oy = e.clientY - r.top;
-  };
 
-  document.onmousemove = (e)=>{
+    const rect = el.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+
+    el.style.position = "absolute";
+  });
+
+  document.addEventListener("mousemove", (e) => {
     if(!dragging) return;
-    el.style.left = (e.clientX - ox) + "px";
-    el.style.top = (e.clientY - oy) + "px";
-    el.style.transform = "none";
-  };
 
-  document.onmouseup = ()=> dragging = false;
+    el.style.left = (e.clientX - offsetX) + "px";
+    el.style.top = (e.clientY - offsetY) + "px";
+  });
+
+  document.addEventListener("mouseup", () => {
+    dragging = false;
+  });
 }
 
 /* MAKE TITLE DRAGGABLE */
 makeDraggable(document.getElementById("title"));
 makeDraggable(document.getElementById("search-container"));
 
-/* CHANGE TITLE (NEW FIX) */
+/* CHANGE TITLE */
 function changeTitle(){
-  const newTitle = prompt("Enter new title:");
-  if(newTitle){
-    document.getElementById("title").innerText = newTitle;
+  const t = prompt("New title:");
+  if(t){
+    document.getElementById("title").innerText = t;
   }
 }
 
-/* ADD TEXT (FIXED WORKING) */
+/* CREATE ITEM */
+function createItem(el){
+  const wrap = document.createElement("div");
+  wrap.className = "draggable";
+  wrap.style.left = "120px";
+  wrap.style.top = "150px";
+
+  wrap.appendChild(el);
+
+  document.body.appendChild(wrap);
+  makeDraggable(wrap);
+}
+
+/* ADD TEXT (matches background color) */
 function addText(){
   const box = document.createElement("div");
   box.contentEditable = true;
   box.innerText = "New Text";
-  box.style.padding = "6px";
-  box.style.background = "white";
-  box.style.minWidth = "100px";
+
+  box.style.padding = "8px";
+  box.style.minWidth = "120px";
+  box.style.background = bgColor;
+  box.style.borderRadius = "5px";
+
   createItem(box);
 }
 
-/* ADD IMAGE */
+/* IMAGE */
 function addImage(){
   const url = prompt("Image URL:");
   if(!url) return;
@@ -205,10 +211,11 @@ function addImage(){
   const img = document.createElement("img");
   img.src = url;
   img.style.width = "200px";
+
   createItem(img);
 }
 
-/* ADD VIDEO */
+/* VIDEO */
 function addVideo(){
   const url = prompt("Video URL:");
   if(!url) return;
@@ -217,25 +224,8 @@ function addVideo(){
   vid.src = url;
   vid.controls = true;
   vid.style.width = "300px";
+
   createItem(vid);
-}
-
-/* CREATE ITEM WRAPPER */
-function createItem(el){
-  const wrap = document.createElement("div");
-  wrap.className = "draggable";
-  wrap.style.position = "absolute";
-  wrap.style.left = "120px";
-  wrap.style.top = "150px";
-
-  wrap.appendChild(el);
-
-  if(deleteMode){
-    wrap.onclick = ()=>wrap.remove();
-  }
-
-  document.body.appendChild(wrap);
-  makeDraggable(wrap);
 }
 
 /* BACKGROUND COLOR */
@@ -243,56 +233,27 @@ function pickColor(){
   const input = document.createElement("input");
   input.type = "color";
 
-  input.oninput = ()=>{
-    document.body.style.background = input.value;
+  input.oninput = () => {
+    bgColor = input.value;
+    document.body.style.background = bgColor;
+
+    document.querySelectorAll("[contenteditable]").forEach(el=>{
+      el.style.background = bgColor;
+    });
   };
 
   input.click();
 }
 
-/* DELETE MODE */
-function toggleDelete(){
-  deleteMode = !deleteMode;
-  alert(deleteMode ? "Delete ON" : "Delete OFF");
+/* SIDEBAR */
+function toggleSidebar(){
+  document.getElementById("sidebar").classList.toggle("show");
 }
 
 /* HELP */
-function howTo(){
+function toggleHelp(){
   const box = document.getElementById("helpBox");
   box.style.display = box.style.display === "block" ? "none" : "block";
-}
-
-/* SAVE (basic) */
-function savePage(){
-  const name = prompt("Page name:");
-  if(!name) return;
-  pages[name] = document.body.innerHTML;
-  alert("Saved!");
-}
-
-/* NEW PAGE */
-function createPage(){
-  const name = prompt("Page name:");
-  if(!name) return;
-  pages[name] = document.body.innerHTML;
-}
-
-/* HOME */
-function home(){
-  location.reload();
-}
-
-/* SEARCH */
-function searchPage(e){
-  if(e.key === "Enter"){
-    const q = e.target.value;
-    if(pages[q]){
-      document.body.innerHTML = pages[q];
-      location.reload();
-    } else {
-      alert("Not found");
-    }
-  }
 }
 
 </script>
