@@ -11,10 +11,9 @@ body {
   margin:0;
   padding:0;
   background:#fff;
-  transition: background 1.5s ease;
+  transition: background 1s ease;
 }
 
-/* DRAGGABLE */
 .draggable {
   position:absolute;
   cursor:move;
@@ -70,7 +69,7 @@ body {
   cursor:pointer;
 }
 
-/* HELP BOX */
+/* HELP */
 #helpBox {
   display:none;
   position:fixed;
@@ -84,7 +83,6 @@ body {
   z-index:2000;
 }
 
-/* TOGGLE */
 #toggleBtn {
   position:fixed;
   top:50%;
@@ -102,52 +100,55 @@ body {
 
 <body>
 
+<!-- TITLE -->
 <div id="title" class="draggable">Web Builder</div>
 
 <div id="search-container" class="draggable">
   <input id="search-box" placeholder="Search pages..." onkeydown="searchPage(event)">
 </div>
 
+<!-- SIDEBAR -->
 <div id="sidebar">
   <button onclick="home()">Home</button>
+
+  <button onclick="changeTitle()">✏ Change Title</button>
+  <button onclick="addText()">➕ Add Text</button>
   <button onclick="addImage()">Add Image</button>
   <button onclick="addVideo()">Add Video</button>
-  <button onclick="addText()">Add Text</button>
+
   <button onclick="pickColor()">Background Color</button>
   <button onclick="toggleDelete()">🗑 Delete Mode</button>
-  <button onclick="createPage()">+ New Page</button>
-  <button onclick="savePage()">Save Page</button>
-  <button onclick="howTo()">How to use</button>
 
-  <hr>
-  <div id="pageList"></div>
+  <button onclick="savePage()">Save Page</button>
+  <button onclick="createPage()">+ New Page</button>
+  <button onclick="howTo()">How to use</button>
 </div>
 
 <button id="toggleBtn" onclick="toggleSidebar()">☰</button>
 
+<!-- HELP -->
 <div id="helpBox">
   <h3>How to use</h3>
   <ul>
-    <li>Drag everything on screen</li>
-    <li>Add text/images/videos from menu</li>
-    <li>Change background color smoothly</li>
-    <li>Delete mode removes items</li>
-    <li>Save and switch pages</li>
+    <li>Drag everything (title, text, images)</li>
+    <li>Use buttons in sidebar to add stuff</li>
+    <li>Click Change Title to rename website</li>
+    <li>Use delete mode to remove items</li>
   </ul>
   <button onclick="toggleHelp()">Close</button>
 </div>
 
 <script>
 
-let pages = {};
 let deleteMode = false;
+let pages = {};
 
 /* SIDEBAR */
 function toggleSidebar(){
   document.getElementById("sidebar").classList.toggle("show");
 }
 
-/* DRAG */
+/* DRAG SYSTEM */
 function makeDraggable(el){
   let dragging = false;
   let ox = 0;
@@ -173,39 +174,34 @@ function makeDraggable(el){
   document.onmouseup = ()=> dragging = false;
 }
 
-/* INIT DRAG */
+/* MAKE TITLE DRAGGABLE */
 makeDraggable(document.getElementById("title"));
 makeDraggable(document.getElementById("search-container"));
 
-/* CREATE ITEM */
-function createItem(el){
-  const wrap = document.createElement("div");
-  wrap.className = "draggable";
-  wrap.style.left = "120px";
-  wrap.style.top = "150px";
-
-  wrap.appendChild(el);
-
-  if(deleteMode) wrap.onclick = ()=>wrap.remove();
-
-  document.body.appendChild(wrap);
-  makeDraggable(wrap);
+/* CHANGE TITLE (NEW FIX) */
+function changeTitle(){
+  const newTitle = prompt("Enter new title:");
+  if(newTitle){
+    document.getElementById("title").innerText = newTitle;
+  }
 }
 
-/* ADD TEXT */
+/* ADD TEXT (FIXED WORKING) */
 function addText(){
-  const div = document.createElement("div");
-  div.contentEditable = true;
-  div.innerText = "New Text";
-  div.style.padding = "5px";
-  div.style.background = "white";
-  createItem(div);
+  const box = document.createElement("div");
+  box.contentEditable = true;
+  box.innerText = "New Text";
+  box.style.padding = "6px";
+  box.style.background = "white";
+  box.style.minWidth = "100px";
+  createItem(box);
 }
 
 /* ADD IMAGE */
 function addImage(){
-  const url = prompt("Image URL");
+  const url = prompt("Image URL:");
   if(!url) return;
+
   const img = document.createElement("img");
   img.src = url;
   img.style.width = "200px";
@@ -214,8 +210,9 @@ function addImage(){
 
 /* ADD VIDEO */
 function addVideo(){
-  const url = prompt("Video URL");
+  const url = prompt("Video URL:");
   if(!url) return;
+
   const vid = document.createElement("video");
   vid.src = url;
   vid.controls = true;
@@ -223,16 +220,34 @@ function addVideo(){
   createItem(vid);
 }
 
-/* ✅ SMOOTH BACKGROUND COLOR */
-function pickColor(){
-  const picker = document.createElement("input");
-  picker.type = "color";
+/* CREATE ITEM WRAPPER */
+function createItem(el){
+  const wrap = document.createElement("div");
+  wrap.className = "draggable";
+  wrap.style.position = "absolute";
+  wrap.style.left = "120px";
+  wrap.style.top = "150px";
 
-  picker.oninput = () => {
-    document.body.style.background = picker.value;
+  wrap.appendChild(el);
+
+  if(deleteMode){
+    wrap.onclick = ()=>wrap.remove();
+  }
+
+  document.body.appendChild(wrap);
+  makeDraggable(wrap);
+}
+
+/* BACKGROUND COLOR */
+function pickColor(){
+  const input = document.createElement("input");
+  input.type = "color";
+
+  input.oninput = ()=>{
+    document.body.style.background = input.value;
   };
 
-  picker.click();
+  input.click();
 }
 
 /* DELETE MODE */
@@ -241,24 +256,18 @@ function toggleDelete(){
   alert(deleteMode ? "Delete ON" : "Delete OFF");
 }
 
-/* SAVE */
+/* HELP */
+function howTo(){
+  const box = document.getElementById("helpBox");
+  box.style.display = box.style.display === "block" ? "none" : "block";
+}
+
+/* SAVE (basic) */
 function savePage(){
   const name = prompt("Page name:");
   if(!name) return;
-
   pages[name] = document.body.innerHTML;
   alert("Saved!");
-}
-
-/* LOAD */
-function loadPage(name){
-  document.body.innerHTML = pages[name];
-  location.reload();
-}
-
-/* HOME */
-function home(){
-  location.reload();
 }
 
 /* NEW PAGE */
@@ -266,6 +275,11 @@ function createPage(){
   const name = prompt("Page name:");
   if(!name) return;
   pages[name] = document.body.innerHTML;
+}
+
+/* HOME */
+function home(){
+  location.reload();
 }
 
 /* SEARCH */
@@ -279,12 +293,6 @@ function searchPage(e){
       alert("Not found");
     }
   }
-}
-
-/* HELP */
-function howTo(){
-  const box = document.getElementById("helpBox");
-  box.style.display = box.style.display === "block" ? "none" : "block";
 }
 
 </script>
