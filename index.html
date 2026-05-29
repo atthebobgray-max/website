@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Searchify</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin:0;
+  padding:0;
+  background:#fff;
+}
+
+.draggable {
+  position:absolute;
+  cursor:move;
+  user-select:none;
+}
+
+/* TITLE */
+#title {
+  left:50px;
+  top:20px;
+  font-size:40px;
+  font-weight:bold;
+}
+
+/* SEARCH WRAPPER (NOW DRAGGABLE) */
+#search-container {
+  position:absolute;
+  top:80px;
+  left:50%;
+  transform:translateX(-50%);
+  cursor:move;
+}
+
+/* SEARCH INPUT (NOT DRAGGABLE ANYMORE) */
+#search-box {
+  width:300px;
+  padding:10px 20px;
+  font-size:16px;
+  border-radius:25px;
+  border:1px solid #ccc;
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  user-select:text;
+  cursor:text;
+}
+
+/* SIDEBAR */
+#sidebar {
+  position:fixed;
+  left:-220px;
+  top:0;
+  width:200px;
+  height:100%;
+  background:#4285F4;
+  color:white;
+  padding:10px;
+  box-shadow:2px 0 5px rgba(0,0,0,0.2);
+  transition:left 0.3s;
+  z-index:1000;
+}
+
+#sidebar.show { left:0; }
+
+#sidebar button {
+  display:block;
+  margin:10px 0;
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+  background:white;
+  color:#4285F4;
+  font-weight:bold;
+}
+
+/* TOGGLE BUTTON */
+#toggleBtn {
+  position:fixed;
+  top:50%;
+  right:10px;
+  transform:translateY(-50%);
+  width:50px;
+  height:50px;
+  border-radius:50%;
+  background:#4285F4;
+  color:white;
+  font-size:24px;
+  border:none;
+  cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,0.3);
+  z-index:1001;
+}
+</style>
+</head>
+
+<body>
+
+<div id="title" class="draggable" onclick="renameTitle()">My Title</div>
+
+<!-- DRAGGABLE SEARCH BAR -->
+<div id="search-container">
+  <input id="search-box" placeholder="Search..." onkeydown="searchPage(event)">
+</div>
+
+<div id="sidebar">
+  <button onclick="home()">Home</button>
+  <button onclick="addImage()">Image</button>
+  <button onclick="addVideo()">Video</button>
+  <button onclick="addText()">Text</button>
+  <button onclick="addLink()">Link</button>
+  <button onclick="pickColor()">Background Color</button>
+  <button onclick="createPage()">Next Page</button>
+  <button onclick="savePage()">Save Page</button>
+</div>
+
+<button id="toggleBtn" onclick="toggleSidebar()">☰</button>
+
+<input type="color" id="colorPicker" style="display:none">
+
+<script>
+let pages = {};
+let currentPage = 'Home';
+
+function toggleSidebar(){
+  document.getElementById("sidebar").classList.toggle("show");
+}
+
+function home(){
+  loadPage('Home');
+}
+
+function renameTitle(){
+  const t = prompt("Rename the title:");
+  if(t) document.getElementById("title").innerText = t;
+}
+
+/* DRAG FUNCTION */
+function makeDraggable(el){
+  let isDragging = false, offsetX = 0, offsetY = 0;
+
+  el.addEventListener("mousedown", function(e){
+    if(e.target.tagName === "INPUT" || e.target.isContentEditable) return;
+    isDragging = true;
+    offsetX = e.clientX - el.offsetLeft;
+    offsetY = e.clientY - el.offsetTop;
+  });
+
+  document.addEventListener("mousemove", function(e){
+    if(!isDragging) return;
+    el.style.left = (e.clientX - offsetX) + "px";
+    el.style.top = (e.clientY - offsetY) + "px";
+    el.style.transform = "none"; // important for centered elements
+  });
+
+  document.addEventListener("mouseup", function(){
+    isDragging = false;
+  });
+}
+
+makeDraggable(document.getElementById("title"));
+makeDraggable(document.getElementById("search-container"));
+
+function createItem(content){
+  const wrapper = document.createElement("div");
+  wrapper.className="draggable";
+  wrapper.style.left="100px";
+  wrapper.style.top="150px";
+  wrapper.appendChild(content);
+  makeDraggable(wrapper);
+  document.body.appendChild(wrapper);
+}
+
+/* IMAGE */
+function addImage(){ 
+  const url = prompt("Enter image URL (leave blank for camera)");
+
+  if(url){
+    const img = document.createElement("img");
+    img.src = url;
+    img.style.width = "200px";
+    createItem(img);
+    return;
+  }
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.capture = "environment";
+
+  input.onchange = e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    img.style.width = "200px";
+    createItem(img);
+  };
+
+  input.click();
+}
+
+/* VIDEO */
+function addVideo(){ 
+  const url = prompt("Enter video URL (leave blank for camera)");
+
+  if(url){
+    const vid = document.createElement("video");
+    vid.src = url;
+    vid.controls = true;
+    vid.style.width = "300px";
+    createItem(vid);
+    return;
+  }
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "video/*";
+  input.capture = "environment";
+
+  input.onchange = e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const vid = document.createElement("video");
+    vid.src = URL.createObjectURL(file);
+    vid.controls = true;
+    vid.style.width = "300px";
+    createItem(vid);
+  };
+
+  input.click();
+}
+
+/* TEXT */
+function addText(){ 
+  const div=document.createElement("div"); 
+  div.contentEditable=true; 
+  div.innerText="Editable text"; 
+  createItem(div); 
+}
+
+/* LINK */
+function addLink(){ 
+  const url=prompt("Enter URL:"); 
+  if(!url) return; 
+  const a=document.createElement("a"); 
+  a.href=url; 
+  a.innerText=url; 
+  a.target="_blank"; 
+  createItem(a); 
+}
+
+/* BACKGROUND COLOR */
+function pickColor(){ 
+  const picker=document.getElementById("colorPicker"); 
+  picker.click(); 
+  picker.oninput=()=>document.body.style.background=picker.value; 
+}
+
+/* SAVE */
+function savePage(){
+  const saveName = prompt("Enter a name to save this page:");
+  if(!saveName) return;
+
+  pages[saveName] = Array.from(document.body.querySelectorAll('.draggable, video, img, div[contenteditable], a'))
+    .map(el=>el.outerHTML);
+
+  alert("Page saved as '"+saveName+"'");
+}
+
+/* LOAD */
+function loadPage(name){
+  currentPage = name;
+
+  document.querySelectorAll('.draggable').forEach(el=>el.remove());
+  document.querySelectorAll('video, img, div[contenteditable], a').forEach(el=>{
+    if(!el.id && el.tagName!=='INPUT') el.remove();
+  });
+
+  const search = document.getElementById("search-container");
+  if(name === "Home"){
+    search.style.display = "block";
+    const t = document.createElement("div");
+    t.id="title";
+    t.className="draggable";
+    t.innerText="My Title";
+    t.onclick = renameTitle;
+    document.body.appendChild(t);
+    makeDraggable(t);
+  } else {
+    search.style.display = "none";
+  }
+}
+
+/* PAGE */
+function createPage(){
+  const pageName = prompt("Enter a name for this page:");
+  if(!pageName) return;
+  pages[pageName] = [];
+  loadPage(pageName);
+
+  // Hide search bar on new page
+  document.getElementById("search-container").style.display = "none";
+}
+
+/* SEARCH */
+function searchPage(e){
+  if(e.key === 'Enter'){
+    const query = e.target.value;
+    if(pages[query]) loadPage(query);
+    else alert("Page '"+query+"' not found!");
+  }
+}
+</script>
+
+</body>
+</html>
