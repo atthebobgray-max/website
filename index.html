@@ -29,11 +29,9 @@ body {
 
 /* SEARCH */
 #search-container {
-  position:absolute;
   top:80px;
   left:50%;
   transform:translateX(-50%);
-  cursor:move;
 }
 
 #search-box {
@@ -100,9 +98,9 @@ body {
 
 <body>
 
-<div id="title">Web Builder</div>
+<div id="title" class="draggable">Web Builder</div>
 
-<div id="search-container">
+<div id="search-container" class="draggable">
   <input id="search-box" placeholder="Search pages..." onkeydown="searchPage(event)">
 </div>
 
@@ -126,10 +124,10 @@ body {
 <div id="helpBox">
   <h3>How to use</h3>
   <ul>
-    <li>Drag items around the page</li>
-    <li>Add images/videos/text/links from menu</li>
+    <li>Drag title, search bar, images, videos, text, or links</li>
+    <li>Add images/videos/text/links from the menu</li>
     <li>Use Delete Mode to remove items</li>
-    <li>Save pages and reopen them from sidebar</li>
+    <li>Save pages and switch between them using sidebar</li>
     <li>Search pages from Home screen</li>
   </ul>
   <button onclick="toggleHelp()">Close</button>
@@ -158,84 +156,103 @@ function refreshPageList(){
   });
 }
 
-/* DRAG */
+/* UNIVERSAL DRAG FUNCTION */
 function makeDraggable(el){
-  let drag=false, ox=0, oy=0;
+  let dragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
 
-  el.onmousedown = e=>{
-    if(deleteMode) return;
-    drag=true;
-    ox=e.clientX-el.offsetLeft;
-    oy=e.clientY-el.offsetTop;
-  };
+  el.addEventListener("mousedown", (e) => {
+    if (deleteMode) return;
+    // Allow input typing, links, videos interaction
+    if(e.target.tagName==="INPUT" || e.target.tagName==="TEXTAREA" || e.target.tagName==="VIDEO" || e.target.tagName==="A") return;
 
-  document.onmousemove = e=>{
-    if(!drag) return;
-    el.style.left=(e.clientX-ox)+"px";
-    el.style.top=(e.clientY-oy)+"px";
-  };
+    dragging = true;
+    offsetX = e.clientX - el.getBoundingClientRect().left;
+    offsetY = e.clientY - el.getBoundingClientRect().top;
 
-  document.onmouseup = ()=>drag=false;
+    el.style.position = "absolute";
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+
+    el.style.left = (e.clientX - offsetX) + "px";
+    el.style.top = (e.clientY - offsetY) + "px";
+    el.style.transform = "none";
+  });
+
+  document.addEventListener("mouseup", () => {
+    dragging = false;
+  });
 }
 
 /* DELETE MODE */
 function toggleDelete(){
-  deleteMode=!deleteMode;
-  alert(deleteMode?"Delete ON":"Delete OFF");
+  deleteMode = !deleteMode;
+  alert(deleteMode ? "Delete mode ON (click items to remove)" : "Delete mode OFF");
 }
 
-/* ITEMS */
+/* ITEM CREATION */
 function createItem(el){
-  const w=document.createElement("div");
-  w.className="draggable";
-  w.style.left="120px";
-  w.style.top="150px";
-  w.appendChild(el);
+  const wrapper = document.createElement("div");
+  wrapper.className = "draggable";
+  wrapper.style.position = "absolute";
+  wrapper.style.left = "120px";
+  wrapper.style.top = "150px";
+  wrapper.appendChild(el);
 
-  if(deleteMode) w.onclick=()=>w.remove();
+  if(deleteMode) wrapper.onclick=()=>wrapper.remove();
 
-  makeDraggable(w);
-  document.body.appendChild(w);
+  document.body.appendChild(wrapper);
+  makeDraggable(wrapper);
 }
 
 /* ADD ITEMS */
 function addImage(){
-  const u=prompt("Image URL"); if(!u) return;
-  const i=document.createElement("img");
-  i.src=u; i.style.width="200px";
+  const u = prompt("Image URL");
+  if(!u) return;
+  const i = document.createElement("img");
+  i.src = u;
+  i.style.width="200px";
   createItem(i);
 }
 
 function addVideo(){
-  const u=prompt("Video URL"); if(!u) return;
-  const v=document.createElement("video");
-  v.src=u; v.controls=true; v.style.width="300px";
+  const u = prompt("Video URL");
+  if(!u) return;
+  const v = document.createElement("video");
+  v.src=u;
+  v.controls=true;
+  v.style.width="300px";
   createItem(v);
 }
 
 function addText(){
-  const d=document.createElement("div");
+  const d = document.createElement("div");
   d.contentEditable=true;
   d.innerText="Text";
   createItem(d);
 }
 
 function addLink(){
-  const u=prompt("URL"); if(!u) return;
-  const a=document.createElement("a");
-  a.href=u; a.target="_blank"; a.innerText=u;
+  const u = prompt("URL");
+  if(!u) return;
+  const a = document.createElement("a");
+  a.href=u;
+  a.target="_blank";
+  a.innerText=u;
   createItem(a);
 }
 
-/* SAVE */
+/* SAVE PAGE */
 function savePage(){
-  const name=prompt("Page name");
+  const name = prompt("Page name");
   if(!name) return;
 
-  const data=[];
+  const data = [];
   document.querySelectorAll(".draggable").forEach(el=>{
-    if(el.id==="search-container") return;
-
+    if(el.id==="search-container" || el.id==="title") return;
     data.push({
       html: el.innerHTML,
       x: el.style.left,
@@ -243,24 +260,24 @@ function savePage(){
     });
   });
 
-  pages[name]=data;
+  pages[name] = data;
   refreshPageList();
   alert("Saved!");
 }
 
-/* LOAD */
+/* LOAD PAGE */
 function loadPage(name){
-  currentPage=name;
+  currentPage = name;
 
   document.querySelectorAll(".draggable").forEach(el=>{
-    if(el.id!=="search-container") el.remove();
+    if(el.id !== "search-container" && el.id !== "title") el.remove();
   });
 
   document.getElementById("search-container").style.display =
     name==="Home" ? "block" : "none";
 
-  (pages[name]||[]).forEach(item=>{
-    const d=document.createElement("div");
+  (pages[name] || []).forEach(item=>{
+    const d = document.createElement("div");
     d.className="draggable";
     d.style.left=item.x;
     d.style.top=item.y;
@@ -271,15 +288,13 @@ function loadPage(name){
 }
 
 /* HOME */
-function home(){
-  loadPage("Home");
-}
+function home(){ loadPage("Home"); }
 
 /* NEW PAGE */
 function createPage(){
-  const n=prompt("Page name");
+  const n = prompt("Page name");
   if(!n) return;
-  pages[n]=[];
+  pages[n] = [];
   loadPage(n);
   refreshPageList();
 }
@@ -287,24 +302,25 @@ function createPage(){
 /* SEARCH */
 function searchPage(e){
   if(e.key==="Enter"){
-    const q=e.target.value;
+    const q = e.target.value;
     if(pages[q]) loadPage(q);
-    else alert("Not found");
+    else alert("Page not found");
   }
 }
 
 /* HELP */
 function howTo(){ toggleHelp(); }
-
 function toggleHelp(){
-  const h=document.getElementById("helpBox");
+  const h = document.getElementById("helpBox");
   h.style.display = (h.style.display==="block") ? "none" : "block";
 }
 
 /* INIT */
+makeDraggable(document.getElementById("title"));
+makeDraggable(document.getElementById("search-container"));
 refreshPageList();
 loadPage("Home");
-</script>
 
+</script>
 </body>
 </html>
