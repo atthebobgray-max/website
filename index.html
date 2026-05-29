@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Searchify</title>
+<title>Web Builder</title>
 
 <style>
 body {
@@ -13,6 +13,7 @@ body {
   background:#fff;
 }
 
+/* DRAGGABLE ITEMS */
 .draggable {
   position:absolute;
   cursor:move;
@@ -27,7 +28,7 @@ body {
   font-weight:bold;
 }
 
-/* SEARCH WRAPPER (NOW DRAGGABLE) */
+/* SEARCH / TOOLBAR */
 #search-container {
   position:absolute;
   top:80px;
@@ -36,7 +37,6 @@ body {
   cursor:move;
 }
 
-/* SEARCH INPUT (NOT DRAGGABLE ANYMORE) */
 #search-box {
   width:300px;
   padding:10px 20px;
@@ -44,21 +44,19 @@ body {
   border-radius:25px;
   border:1px solid #ccc;
   box-shadow:0 2px 6px rgba(0,0,0,0.2);
-  user-select:text;
   cursor:text;
 }
 
 /* SIDEBAR */
 #sidebar {
   position:fixed;
-  left:-220px;
+  left:-260px;
   top:0;
-  width:200px;
+  width:240px;
   height:100%;
   background:#4285F4;
   color:white;
   padding:10px;
-  box-shadow:2px 0 5px rgba(0,0,0,0.2);
   transition:left 0.3s;
   z-index:1000;
 }
@@ -66,19 +64,16 @@ body {
 #sidebar.show { left:0; }
 
 #sidebar button {
-  display:block;
-  margin:10px 0;
   width:100%;
+  margin:6px 0;
   padding:10px;
   border:none;
   border-radius:5px;
   cursor:pointer;
-  background:white;
-  color:#4285F4;
   font-weight:bold;
 }
 
-/* TOGGLE BUTTON */
+/* TOGGLE */
 #toggleBtn {
   position:fixed;
   top:50%;
@@ -92,232 +87,246 @@ body {
   font-size:24px;
   border:none;
   cursor:pointer;
-  box-shadow:0 2px 8px rgba(0,0,0,0.3);
-  z-index:1001;
+}
+
+/* HELP BOX */
+#helpBox {
+  display:none;
+  position:fixed;
+  right:20px;
+  bottom:80px;
+  width:280px;
+  background:white;
+  border:2px solid #4285F4;
+  padding:15px;
+  border-radius:10px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.2);
+  z-index:2000;
+}
+#helpBox h3 { margin-top:0; }
+#helpBox ul { padding-left:18px; }
+#helpBox button {
+  margin-top:10px;
+  padding:8px;
+  width:100%;
+  background:#4285F4;
+  color:white;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
 }
 </style>
 </head>
 
 <body>
 
-<div id="title" class="draggable" onclick="renameTitle()">My Title</div>
+<div id="title">Web Builder</div>
 
-<!-- DRAGGABLE SEARCH BAR -->
 <div id="search-container">
-  <input id="search-box" placeholder="Search..." onkeydown="searchPage(event)">
+  <input id="search-box" placeholder="Search pages..." onkeydown="searchPage(event)">
 </div>
 
 <div id="sidebar">
   <button onclick="home()">Home</button>
-  <button onclick="addImage()">Image</button>
-  <button onclick="addVideo()">Video</button>
-  <button onclick="addText()">Text</button>
-  <button onclick="addLink()">Link</button>
-  <button onclick="pickColor()">Background Color</button>
-  <button onclick="createPage()">Next Page</button>
+  <button onclick="addImage()">Add Image</button>
+  <button onclick="addVideo()">Add Video</button>
+  <button onclick="addText()">Add Text</button>
+  <button onclick="addLink()">Add Link</button>
+  <button onclick="toggleDelete()">🗑 Delete Mode</button>
+  <button onclick="createPage()">+ New Page</button>
   <button onclick="savePage()">Save Page</button>
+  <button onclick="howTo()">How to use</button>
+
+  <hr>
+  <div id="pageList"></div>
 </div>
 
 <button id="toggleBtn" onclick="toggleSidebar()">☰</button>
+
+<!-- HELP PANEL -->
+<div id="helpBox">
+  <h3>How to use</h3>
+  <ul>
+    <li>Drag items around the page</li>
+    <li>Add images, videos, text, or links from the menu</li>
+    <li>Click 🗑 Delete Mode then click items to remove them</li>
+    <li>Save pages using "Save Page"</li>
+    <li>Click page names in the sidebar to switch pages</li>
+    <li>Home page shows the search bar</li>
+  </ul>
+  <button onclick="toggleHelp()">Close</button>
+</div>
 
 <input type="color" id="colorPicker" style="display:none">
 
 <script>
 let pages = {};
-let currentPage = 'Home';
+let currentPage = "Home";
+let deleteMode = false;
 
+/* SIDEBAR */
 function toggleSidebar(){
   document.getElementById("sidebar").classList.toggle("show");
 }
 
-function home(){
-  loadPage('Home');
+function refreshPageList(){
+  const list = document.getElementById("pageList");
+  list.innerHTML = "<b>Pages:</b><br>";
+  Object.keys(pages).forEach(name=>{
+    const btn = document.createElement("button");
+    btn.innerText = name;
+    btn.onclick = ()=>loadPage(name);
+    list.appendChild(btn);
+  });
 }
 
-function renameTitle(){
-  const t = prompt("Rename the title:");
-  if(t) document.getElementById("title").innerText = t;
-}
-
-/* DRAG FUNCTION */
+/* DRAG */
 function makeDraggable(el){
-  let isDragging = false, offsetX = 0, offsetY = 0;
-
-  el.addEventListener("mousedown", function(e){
-    if(e.target.tagName === "INPUT" || e.target.isContentEditable) return;
-    isDragging = true;
-    offsetX = e.clientX - el.offsetLeft;
-    offsetY = e.clientY - el.offsetTop;
+  let dragging=false, ox=0, oy=0;
+  el.addEventListener("mousedown", e=>{
+    if(deleteMode) return;
+    dragging=true;
+    ox=e.clientX-el.offsetLeft;
+    oy=e.clientY-el.offsetTop;
   });
-
-  document.addEventListener("mousemove", function(e){
-    if(!isDragging) return;
-    el.style.left = (e.clientX - offsetX) + "px";
-    el.style.top = (e.clientY - offsetY) + "px";
-    el.style.transform = "none"; // important for centered elements
+  document.addEventListener("mousemove", e=>{
+    if(!dragging) return;
+    el.style.left=(e.clientX-ox)+"px";
+    el.style.top=(e.clientY-oy)+"px";
   });
+  document.addEventListener("mouseup", ()=>dragging=false);
+}
 
-  document.addEventListener("mouseup", function(){
-    isDragging = false;
+/* DELETE MODE */
+function toggleDelete(){
+  deleteMode = !deleteMode;
+  alert(deleteMode ? "Delete mode ON (click items to remove)" : "Delete mode OFF");
+  document.querySelectorAll(".draggable").forEach(el=>{
+    el.onclick = deleteMode ? ()=>el.remove() : null;
   });
 }
 
-makeDraggable(document.getElementById("title"));
-makeDraggable(document.getElementById("search-container"));
-
-function createItem(content){
-  const wrapper = document.createElement("div");
-  wrapper.className="draggable";
-  wrapper.style.left="100px";
-  wrapper.style.top="150px";
-  wrapper.appendChild(content);
-  makeDraggable(wrapper);
-  document.body.appendChild(wrapper);
+/* ITEM WRAPPER */
+function createItem(el){
+  const wrap = document.createElement("div");
+  wrap.className="draggable";
+  wrap.style.left="120px";
+  wrap.style.top="150px";
+  wrap.appendChild(el);
+  makeDraggable(wrap);
+  if(deleteMode) wrap.onclick = ()=>wrap.remove();
+  document.body.appendChild(wrap);
 }
 
 /* IMAGE */
-function addImage(){ 
-  const url = prompt("Enter image URL (leave blank for camera)");
-
-  if(url){
-    const img = document.createElement("img");
-    img.src = url;
-    img.style.width = "200px";
-    createItem(img);
-    return;
-  }
-
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.capture = "environment";
-
-  input.onchange = e=>{
-    const file = e.target.files[0];
-    if(!file) return;
-
-    const img = document.createElement("img");
-    img.src = URL.createObjectURL(file);
-    img.style.width = "200px";
-    createItem(img);
-  };
-
-  input.click();
+function addImage(){
+  const url = prompt("Image URL:");
+  if(!url) return;
+  const img = document.createElement("img");
+  img.src=url;
+  img.style.width="200px";
+  createItem(img);
 }
 
 /* VIDEO */
-function addVideo(){ 
-  const url = prompt("Enter video URL (leave blank for camera)");
-
-  if(url){
-    const vid = document.createElement("video");
-    vid.src = url;
-    vid.controls = true;
-    vid.style.width = "300px";
-    createItem(vid);
-    return;
-  }
-
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "video/*";
-  input.capture = "environment";
-
-  input.onchange = e=>{
-    const file = e.target.files[0];
-    if(!file) return;
-
-    const vid = document.createElement("video");
-    vid.src = URL.createObjectURL(file);
-    vid.controls = true;
-    vid.style.width = "300px";
-    createItem(vid);
-  };
-
-  input.click();
+function addVideo(){
+  const url = prompt("Video URL:");
+  if(!url) return;
+  const vid = document.createElement("video");
+  vid.src=url;
+  vid.controls=true;
+  vid.style.width="300px";
+  createItem(vid);
 }
 
 /* TEXT */
-function addText(){ 
-  const div=document.createElement("div"); 
-  div.contentEditable=true; 
-  div.innerText="Editable text"; 
-  createItem(div); 
+function addText(){
+  const div=document.createElement("div");
+  div.contentEditable=true;
+  div.innerText="Text";
+  div.style.padding="5px";
+  createItem(div);
 }
 
 /* LINK */
-function addLink(){ 
-  const url=prompt("Enter URL:"); 
-  if(!url) return; 
-  const a=document.createElement("a"); 
-  a.href=url; 
-  a.innerText=url; 
-  a.target="_blank"; 
-  createItem(a); 
+function addLink(){
+  const url=prompt("URL:");
+  if(!url) return;
+  const a=document.createElement("a");
+  a.href=url;
+  a.target="_blank";
+  a.innerText=url;
+  createItem(a);
 }
 
-/* BACKGROUND COLOR */
-function pickColor(){ 
-  const picker=document.getElementById("colorPicker"); 
-  picker.click(); 
-  picker.oninput=()=>document.body.style.background=picker.value; 
-}
-
-/* SAVE */
+/* SAVE PAGE */
 function savePage(){
-  const saveName = prompt("Enter a name to save this page:");
-  if(!saveName) return;
-
-  pages[saveName] = Array.from(document.body.querySelectorAll('.draggable, video, img, div[contenteditable], a'))
-    .map(el=>el.outerHTML);
-
-  alert("Page saved as '"+saveName+"'");
-}
-
-/* LOAD */
-function loadPage(name){
-  currentPage = name;
-
-  document.querySelectorAll('.draggable').forEach(el=>el.remove());
-  document.querySelectorAll('video, img, div[contenteditable], a').forEach(el=>{
-    if(!el.id && el.tagName!=='INPUT') el.remove();
+  const name = prompt("Page name:");
+  if(!name) return;
+  const data = [];
+  document.querySelectorAll(".draggable").forEach(el=>{
+    if(el.id==="search-container") return;
+    data.push({
+      html: el.innerHTML,
+      x: el.style.left,
+      y: el.style.top
+    });
   });
+  pages[name] = data;
+  refreshPageList();
+  alert("Saved!");
+}
 
+/* LOAD PAGE */
+function loadPage(name){
+  currentPage=name;
+  document.querySelectorAll(".draggable").forEach(el=>{
+    if(el.id!=="search-container") el.remove();
+  });
   const search = document.getElementById("search-container");
-  if(name === "Home"){
-    search.style.display = "block";
-    const t = document.createElement("div");
-    t.id="title";
-    t.className="draggable";
-    t.innerText="My Title";
-    t.onclick = renameTitle;
-    document.body.appendChild(t);
-    makeDraggable(t);
-  } else {
-    search.style.display = "none";
-  }
+  search.style.display = (name==="Home") ? "block" : "none";
+  const data = pages[name];
+  if(!data) return;
+  data.forEach(item=>{
+    const div=document.createElement("div");
+    div.className="draggable";
+    div.style.left=item.x;
+    div.style.top=item.y;
+    div.innerHTML=item.html;
+    makeDraggable(div);
+    document.body.appendChild(div);
+  });
 }
 
-/* PAGE */
+/* HOME */
+function home(){
+  loadPage("Home");
+}
+
+/* NEW PAGE */
 function createPage(){
-  const pageName = prompt("Enter a name for this page:");
-  if(!pageName) return;
-  pages[pageName] = [];
-  loadPage(pageName);
-
-  // Hide search bar on new page
-  document.getElementById("search-container").style.display = "none";
+  const name=prompt("Page name:");
+  if(!name) return;
+  pages[name]=[];
+  loadPage(name);
+  refreshPageList();
 }
 
-/* SEARCH */
+/* SEARCH PAGES */
 function searchPage(e){
-  if(e.key === 'Enter'){
-    const query = e.target.value;
-    if(pages[query]) loadPage(query);
-    else alert("Page '"+query+"' not found!");
+  if(e.key==="Enter"){
+    const q=e.target.value;
+    if(pages[q]) loadPage(q);
+    else alert("Page not found");
   }
 }
-</script>
 
-</body>
-</html>
+/* HOW TO */
+function howTo(){
+  toggleHelp();
+}
+
+/* HELP PANEL */
+function toggleHelp(){
+  const box=document.getElementById("helpBox");
+  box.style.display = (box.style.display==="none" || box.style.display==="") ? "
