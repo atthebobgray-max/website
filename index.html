@@ -76,6 +76,9 @@ body{
   font-weight:bold;
   cursor:pointer;
 }
+#pageList button{
+  background:#6aa0f8;
+}
 
 /* TOGGLE */
 #toggleBtn{
@@ -96,7 +99,7 @@ body{
 
 <body>
 
-<!-- TITLE NEVER REMOVED -->
+<!-- TITLE -->
 <div id="title" class="draggable">Web Builder</div>
 
 <!-- SEARCH -->
@@ -106,72 +109,53 @@ body{
 
 <!-- SIDEBAR -->
 <div id="sidebar">
-
   <button onclick="changeTitle()">✏ Change Title</button>
-
   <button onclick="addText()">➕ Add Text</button>
-
   <button onclick="addImage()">🖼 Add Image</button>
-
   <button onclick="addVideo()">🎥 Add Video</button>
-
   <button onclick="pickColor()">🎨 Background Color</button>
-
+  <button onclick="createPage()">📄 Add Page</button>
   <button onclick="downloadPage()">💾 Save to Downloads</button>
-
+  <hr>
+  <div id="pageList"></div>
 </div>
 
 <button id="toggleBtn" onclick="toggleSidebar()">☰</button>
 
 <script>
-
 /* =========================
    DRAG SYSTEM
 ========================= */
-
 let dragItem = null;
 let offsetX = 0;
 let offsetY = 0;
 
 function enableDrag(el){
-
   el.addEventListener("pointerdown", (e)=>{
-
     dragItem = el;
-
     const rect = el.getBoundingClientRect();
-
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
-
     el.setPointerCapture(e.pointerId);
-
   });
 
   el.addEventListener("pointermove", (e)=>{
-
     if(dragItem !== el) return;
-
     el.style.left = (e.clientX - offsetX) + "px";
     el.style.top = (e.clientY - offsetY) + "px";
-
   });
 
   el.addEventListener("pointerup", ()=>{
-
     dragItem = null;
-
   });
 }
 
-/* ENABLE DRAGGING */
 enableDrag(document.getElementById("title"));
 enableDrag(document.getElementById("search-container"));
 
 /* =========================
    SIDEBAR
 ========================= */
-
 function toggleSidebar(){
   document.getElementById("sidebar").classList.toggle("show");
 }
@@ -179,146 +163,172 @@ function toggleSidebar(){
 /* =========================
    TITLE
 ========================= */
-
 function changeTitle(){
-
   const t = prompt("Enter new title:");
-
   if(t){
     document.getElementById("title").innerText = t;
   }
 }
 
 /* =========================
+   PAGE SYSTEM
+========================= */
+let pages = {
+  Home: {
+    elements:[]
+  }
+};
+let currentPage = "Home";
+
+function createPage(){
+  const name = prompt("Page name:");
+  if(!name) return;
+  if(pages[name]){
+    alert("Page already exists");
+    return;
+  }
+  pages[name] = {elements:[]};
+  openPage(name);
+  updatePageList();
+}
+
+function saveCurrentPage(){
+  const items = document.querySelectorAll(".page-item");
+  pages[currentPage].elements = [];
+  items.forEach(el=>{
+    pages[currentPage].elements.push({
+      html: el.innerHTML,
+      left: el.style.left,
+      top: el.style.top
+    });
+  });
+}
+
+function openPage(name){
+  saveCurrentPage();
+  currentPage = name;
+  document.querySelectorAll(".page-item").forEach(el=>el.remove());
+  pages[name].elements.forEach(data=>{
+    const div = document.createElement("div");
+    div.className = "page-item draggable";
+    div.innerHTML = data.html;
+    div.style.left = data.left;
+    div.style.top = data.top;
+    document.body.appendChild(div);
+    enableDrag(div);
+  });
+  updatePageList();
+  history.pushState({page:name},"","#"+name);
+}
+
+function updatePageList(){
+  const list = document.getElementById("pageList");
+  list.innerHTML = "";
+  for(let page in pages){
+    const btn = document.createElement("button");
+    btn.textContent = page;
+    btn.onclick = ()=>openPage(page);
+    list.appendChild(btn);
+  }
+}
+
+window.onpopstate = (e)=>{
+  if(e.state){
+    openPage(e.state.page);
+  }
+}
+
+/* =========================
    CREATE ITEM
 ========================= */
-
 function createItem(el){
-
   const wrap = document.createElement("div");
-
-  wrap.className = "draggable";
-
+  wrap.className = "draggable page-item";
   wrap.style.left = "120px";
   wrap.style.top = "160px";
-
   wrap.appendChild(el);
-
   document.body.appendChild(wrap);
-
   enableDrag(wrap);
 }
 
 /* =========================
    ADD TEXT
 ========================= */
-
 function addText(){
-
   const box = document.createElement("div");
-
   box.contentEditable = true;
-
   box.innerText = "New Text";
-
   box.style.padding = "8px";
   box.style.background = "#eeeeee";
   box.style.borderRadius = "6px";
   box.style.minWidth = "100px";
-
   createItem(box);
 }
 
 /* =========================
    ADD IMAGE
 ========================= */
-
 function addImage(){
-
   const url = prompt("Image URL:");
-
   if(!url) return;
-
   const img = document.createElement("img");
-
   img.src = url;
   img.style.width = "200px";
-
   createItem(img);
 }
 
 /* =========================
    ADD VIDEO
 ========================= */
-
 function addVideo(){
-
   const url = prompt("Video URL:");
-
   if(!url) return;
-
   const vid = document.createElement("video");
-
   vid.src = url;
   vid.controls = true;
   vid.style.width = "300px";
-
   createItem(vid);
 }
 
 /* =========================
    BACKGROUND COLOR
 ========================= */
-
 function pickColor(){
-
   const input = document.createElement("input");
-
   input.type = "color";
-
-  input.oninput = ()=>{
-
-    document.body.style.background = input.value;
-
-  };
-
+  input.oninput = ()=>document.body.style.background = input.value;
   input.click();
 }
 
 /* =========================
    SAVE TO DOWNLOADS
 ========================= */
-
 function downloadPage(){
-
-  /* MAKE SURE TITLE ALWAYS EXISTS */
-
-  const title = document.getElementById("title");
-
-  if(!title){
-    alert("Title missing!");
-    return;
-  }
-
+  saveCurrentPage();
   const html = document.documentElement.outerHTML;
-
-  const blob = new Blob([html], {
-    type:"text/html"
-  });
-
+  const blob = new Blob([html], {type:"text/html"});
   const url = URL.createObjectURL(blob);
-
   const a = document.createElement("a");
-
   a.href = url;
-
   a.download = "web-builder.html";
-
   a.click();
-
   URL.revokeObjectURL(url);
 }
 
+/* =========================
+   SEARCH
+========================= */
+document.getElementById("search-box").addEventListener("input", function(){
+  const val = this.value.toLowerCase();
+  for(let page in pages){
+    if(page.toLowerCase().includes(val)){
+      openPage(page);
+      break;
+    }
+  }
+});
+
+updatePageList();
 </script>
 
 </body>
