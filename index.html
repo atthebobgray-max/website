@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Web Builder</title>
+
 <style>
 body{
-  font-family:Arial,sans-serif;
+  font-family: Arial, sans-serif;
   margin:0;
   padding:0;
   background:#ffffff;
   overflow:hidden;
 }
 
-/* DRAGGABLE */
 .draggable{
   position:absolute;
   cursor:grab;
@@ -24,28 +24,28 @@ body{
   cursor:grabbing;
 }
 
-/* TITLE */
 #title{
-  left:50px;
-  top:20px;
-  font-size:40px;
+  left:50%;
+  top:40px;
+  transform:translateX(-50%);
+  font-size:48px;
   font-weight:bold;
+  color:#4285F4;
   z-index:999;
 }
 
-/* SEARCH */
 #search-container{
-  top:90px;
+  top:120px;
   left:50%;
   transform:translateX(-50%);
 }
 
 #search-box{
-  width:300px;
-  padding:10px 20px;
-  border-radius:25px;
+  width:400px;
+  padding:12px 20px;
+  border-radius:24px;
   border:1px solid #ccc;
-  font-size:16px;
+  font-size:18px;
 }
 
 /* SIDEBAR */
@@ -59,12 +59,10 @@ body{
   color:white;
   padding:10px;
   transition:0.3s;
-  z-index:2000;
+  z-index:1000;
 }
 
-#sidebar.show{
-  left:0;
-}
+#sidebar.show{ left:0; }
 
 #sidebar button{
   width:100%;
@@ -78,7 +76,6 @@ body{
 
 #pageList button{
   background:#6aa0f8;
-  margin:3px 0;
 }
 
 /* TOGGLE */
@@ -93,29 +90,31 @@ body{
   background:#4285F4;
   color:white;
   font-size:24px;
-  z-index:3000;
+  z-index:2000;
+  cursor:pointer;
 }
 </style>
 </head>
+
 <body>
 
-<!-- TITLE -->
 <div id="title" class="draggable">Web Builder</div>
 
-<!-- SEARCH -->
 <div id="search-container" class="draggable">
-  <input id="search-box" placeholder="Search page...">
+  <input id="search-box" placeholder="Type page name & press Enter">
 </div>
 
-<!-- SIDEBAR -->
 <div id="sidebar">
+  <button onclick="goHome()">🏠 Home</button>
+
   <button onclick="changeTitle()">✏ Change Title</button>
   <button onclick="addText()">➕ Add Text</button>
   <button onclick="addImage()">🖼 Add Image</button>
   <button onclick="addVideo()">🎥 Add Video</button>
-  <button onclick="pickColor()">🎨 Background Color</button>
+  <button onclick="pickColor()">🎨 Background</button>
   <button onclick="createPage()">📄 Add Page</button>
-  <button onclick="downloadPage()">💾 Save to Downloads</button>
+  <button onclick="downloadPage()">💾 Save</button>
+
   <hr>
   <div id="pageList"></div>
 </div>
@@ -123,16 +122,15 @@ body{
 <button id="toggleBtn" onclick="toggleSidebar()">☰</button>
 
 <script>
-/* =========================
-   DRAG SYSTEM
-========================= */
-let dragItem = null;
-let offsetX = 0;
-let offsetY = 0;
 
+/* ================= DRAG ================= */
 function enableDrag(el){
+  let dragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
   el.addEventListener("pointerdown", (e)=>{
-    dragItem = el;
+    dragging = true;
     const rect = el.getBoundingClientRect();
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
@@ -140,58 +138,67 @@ function enableDrag(el){
   });
 
   el.addEventListener("pointermove", (e)=>{
-    if(dragItem !== el) return;
-    el.style.left = (e.clientX - offsetX) + "px";
-    el.style.top = (e.clientY - offsetY) + "px";
+    if(!dragging) return;
+
+    let x = e.clientX - offsetX;
+    let y = e.clientY - offsetY;
+
+    const maxX = window.innerWidth - el.offsetWidth;
+    const maxY = window.innerHeight - el.offsetHeight;
+
+    if(x < 0) x = 0;
+    if(y < 0) y = 0;
+    if(x > maxX) x = maxX;
+    if(y > maxY) y = maxY;
+
+    el.style.left = x + "px";
+    el.style.top = y + "px";
   });
 
   el.addEventListener("pointerup", ()=>{
-    dragItem = null;
+    dragging = false;
   });
 }
 
 enableDrag(document.getElementById("title"));
 enableDrag(document.getElementById("search-container"));
 
-/* =========================
-   SIDEBAR
-========================= */
+/* ================= SIDEBAR ================= */
 function toggleSidebar(){
   document.getElementById("sidebar").classList.toggle("show");
 }
 
-/* =========================
-   TITLE
-========================= */
-function changeTitle(){
-  const t = prompt("Enter new title:");
-  if(t){
-    document.getElementById("title").innerText = t;
-  }
+/* ================= HOME BUTTON (NEW) ================= */
+function goHome(){
+  saveCurrent();
+  currentPage = "Home";
+
+  clearItems();
+
+  document.getElementById("title").style.display = "block";
+  document.getElementById("search-container").style.display = "block";
+
+  updateList();
+  history.pushState({page:"Home"},"","#Home");
 }
 
-/* =========================
-   PAGE SYSTEM
-========================= */
-let pages = { Home: {elements:[]} };
+/* ================= TITLE ================= */
+function changeTitle(){
+  const t = prompt("New title:");
+  if(t) document.getElementById("title").innerText = t;
+}
+
+/* ================= PAGES ================= */
+
+let pages = { Home:{elements:[]} };
 let currentPage = "Home";
 
-function createPage(){
-  const name = prompt("Page name:");
-  if(!name) return;
-  if(pages[name]){
-    alert("Page already exists");
-    return;
-  }
-  pages[name] = {elements:[]};
-  openPage(name);
-  updatePageList();
-}
+function saveCurrent(){
+  if(!pages[currentPage]) return;
 
-function saveCurrentPage(){
-  const items = document.querySelectorAll(".page-item");
   pages[currentPage].elements = [];
-  items.forEach(el=>{
+
+  document.querySelectorAll(".page-item").forEach(el=>{
     pages[currentPage].elements.push({
       html: el.innerHTML,
       left: el.style.left,
@@ -200,131 +207,130 @@ function saveCurrentPage(){
   });
 }
 
-function openPage(name){
-  saveCurrentPage();
+function clearItems(){
+  document.querySelectorAll(".page-item").forEach(e=>e.remove());
+}
+
+function setHome(show){
+  document.getElementById("title").style.display = show ? "block":"none";
+  document.getElementById("search-container").style.display = show ? "block":"none";
+}
+
+function createPage(){
+  const name = prompt("Page name:");
+  if(!name || pages[name]) return;
+
+  saveCurrent();
+  pages[name] = {elements:[]};
   currentPage = name;
-  document.querySelectorAll(".page-item").forEach(el=>el.remove());
-  pages[name].elements.forEach(data=>{
+
+  clearItems();
+  setHome(false);
+
+  updateList();
+}
+
+function openPage(name){
+  saveCurrent();
+  currentPage = name;
+
+  clearItems();
+
+  setHome(name === "Home");
+
+  pages[name].elements.forEach(d=>{
     const div = document.createElement("div");
-    div.className = "page-item draggable";
-    div.innerHTML = data.html;
-    div.style.left = data.left;
-    div.style.top = data.top;
+    div.className="page-item draggable";
+    div.innerHTML=d.html;
+    div.style.left=d.left;
+    div.style.top=d.top;
     document.body.appendChild(div);
     enableDrag(div);
   });
-  updatePageList();
-  history.pushState({page:name},"","#"+name);
+
+  updateList();
 }
 
-function updatePageList(){
+/* ================= LIST ================= */
+function updateList(){
   const list = document.getElementById("pageList");
-  list.innerHTML = "";
-  for(let page in pages){
-    const btn = document.createElement("button");
-    btn.textContent = page;
-    btn.onclick = ()=>openPage(page);
-    list.appendChild(btn);
+  list.innerHTML="";
+  for(let p in pages){
+    const b=document.createElement("button");
+    b.innerText=p;
+    b.onclick=()=>openPage(p);
+    list.appendChild(b);
   }
 }
 
-window.onpopstate = (e)=>{
-  if(e.state){
-    openPage(e.state.page);
-  }
-}
-
-/* =========================
-   CREATE ITEM
-========================= */
+/* ================= ITEMS ================= */
 function createItem(el){
-  const wrap = document.createElement("div");
-  wrap.className = "draggable page-item";
-  wrap.style.left = "120px";
-  wrap.style.top = "160px";
+  const wrap=document.createElement("div");
+  wrap.className="draggable page-item";
+  wrap.style.left="120px";
+  wrap.style.top="200px";
   wrap.appendChild(el);
   document.body.appendChild(wrap);
   enableDrag(wrap);
 }
 
-/* =========================
-   ADD TEXT
-========================= */
 function addText(){
-  const box = document.createElement("div");
-  box.contentEditable = true;
-  box.innerText = "New Text";
-  box.style.padding = "8px";
-  box.style.background = "#eeeeee";
-  box.style.borderRadius = "6px";
-  box.style.minWidth = "100px";
-  createItem(box);
+  const d=document.createElement("div");
+  d.contentEditable=true;
+  d.innerText="New Text";
+  d.style.padding="8px";
+  d.style.background="#eee";
+  createItem(d);
 }
 
-/* =========================
-   ADD IMAGE
-========================= */
 function addImage(){
-  const url = prompt("Image URL:");
+  const url=prompt("Image URL:");
   if(!url) return;
-  const img = document.createElement("img");
-  img.src = url;
-  img.style.width = "200px";
+  const img=document.createElement("img");
+  img.src=url;
+  img.style.width="200px";
   createItem(img);
 }
 
-/* =========================
-   ADD VIDEO
-========================= */
 function addVideo(){
-  const url = prompt("Video URL:");
+  const url=prompt("Video URL:");
   if(!url) return;
-  const vid = document.createElement("video");
-  vid.src = url;
-  vid.controls = true;
-  vid.style.width = "300px";
-  createItem(vid);
+  const v=document.createElement("video");
+  v.src=url;
+  v.controls=true;
+  v.style.width="300px";
+  createItem(v);
 }
 
-/* =========================
-   BACKGROUND COLOR
-========================= */
 function pickColor(){
-  const input = document.createElement("input");
-  input.type = "color";
-  input.oninput = ()=>document.body.style.background = input.value;
-  input.click();
+  const i=document.createElement("input");
+  i.type="color";
+  i.oninput=()=>document.body.style.background=i.value;
+  i.click();
 }
 
-/* =========================
-   SAVE TO DOWNLOADS
-========================= */
 function downloadPage(){
-  saveCurrentPage();
-  const html = document.documentElement.outerHTML;
-  const blob = new Blob([html], {type:"text/html"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "web-builder.html";
+  saveCurrent();
+  const blob=new Blob([document.documentElement.outerHTML],{type:"text/html"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="web-builder.html";
   a.click();
-  URL.revokeObjectURL(url);
 }
 
-/* =========================
-   SEARCH
-========================= */
-document.getElementById("search-box").addEventListener("input", function(){
-  const val = this.value.toLowerCase();
-  for(let page in pages){
-    if(page.toLowerCase().includes(val)){
-      openPage(page);
-      break;
-    }
+/* ================= SEARCH ================= */
+document.getElementById("search-box").addEventListener("keydown",e=>{
+  if(e.key==="Enter"){
+    const q=e.target.value.trim();
+    if(pages[q]) openPage(q);
+    else alert("Page not found");
   }
 });
 
-updatePageList();
+updateList();
+
 </script>
+
 </body>
 </html>
