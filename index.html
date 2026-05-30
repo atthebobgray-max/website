@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Web Builder</title>
-
 <style>
 body{
   font-family:Arial,sans-serif;
@@ -76,8 +75,10 @@ body{
   font-weight:bold;
   cursor:pointer;
 }
+
 #pageList button{
   background:#6aa0f8;
+  margin:3px 0;
 }
 
 /* TOGGLE */
@@ -96,7 +97,6 @@ body{
 }
 </style>
 </head>
-
 <body>
 
 <!-- TITLE -->
@@ -104,7 +104,7 @@ body{
 
 <!-- SEARCH -->
 <div id="search-container" class="draggable">
-  <input id="search-box" placeholder="Search...">
+  <input id="search-box" placeholder="Search page...">
 </div>
 
 <!-- SIDEBAR -->
@@ -173,11 +173,7 @@ function changeTitle(){
 /* =========================
    PAGE SYSTEM
 ========================= */
-let pages = {
-  Home: {
-    elements:[]
-  }
-};
+let pages = { Home: {elements:[]} };
 let currentPage = "Home";
 
 function createPage(){
@@ -330,6 +326,5 @@ document.getElementById("search-box").addEventListener("input", function(){
 
 updatePageList();
 </script>
-
 </body>
 </html>
